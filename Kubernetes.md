@@ -56,19 +56,19 @@
 8. API Groups - enabled versions  
    `> kubectl api-versions`  
    
-	1. Enable/disable the group version
+	1. Enable/disable the group version   
 	   `> ExecStart=/usr/local/bin/kube-apiserver ... --runtime-config api/all=true,api/v1alpha1 ...    
-	   or 
-	   `vi /etc/kubernetes/manifests/kube-apiserver.yaml` and edit *--runtime-config*
+	   or  
+	   `vi /etc/kubernetes/manifests/kube-apiserver.yaml` and edit *--runtime-config*  
 	   
-	2. Convert versions
-	   Install with curl [kuberctl-convert](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)
-	   `> kubectl convert -f pod-definition.yaml --output-version=apps/v1 > pod-definition-converted.yaml`  
+	2. Convert versions  
+	   Install with curl [kuberctl-convert](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)  
+	   `> kubectl convert -f pod-definition.yaml --output-version=apps/v1 > pod-definition-converted.yaml`    
 	   
 	3. Preferred (default) version
-	   `> kubectl proxy &`  
+	   `> kubectl proxy &`   
 	   `> curl http://localhost:8001/apis`  
-	   or
+	   or  
 	   `> kubectl get --raw /api/v1 | jq -C . | less -iR`  
 	   
 9. API [available/enabled/disabled admission controllers](#1333-operations)
