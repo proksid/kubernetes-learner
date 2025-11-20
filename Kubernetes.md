@@ -124,10 +124,10 @@ They can be allocated on bare metals, VMs or containers, comprising Pods of the 
    Pod's metrics  
    `> kubectl top pods -A`  
    Pod's container metrics  
-   `> kubectl top pods --containers`
+   `> kubectl top pods --containers`  
    Get Pod's metrics sorted by cpu (memory)  
-   `> kubectl top pods --sort-by=cpu`
-   Get raw data for node cr01-worker  
+   `> kubectl top pods --sort-by=cpu`  
+   Get raw data for node cr01-worker   
    `> kubectl get --raw /api/v1/nodes/cr01-worker/proxy/metrics/resource`  
    
 7. Operations  
@@ -717,14 +717,14 @@ Temporary containers running for debugging
    
    
 2. To connect to the **running Pod** *test-pod* with the **failing Container** *test-app-container* and share its PID and Storage,  
-   it requires creating an ephemeral container within the existing Pod and using the *--target* flag  
+   it requires creating an ephemeral container within the existing Pod and using the *--target* flag   
    `> kubectl debug test-pod -it --image=busybox --target=test-app-container`   
    So, in this case, ps/top will show *test-app-container* processes. Having the running app APP_PID,  
-   it is possible to access its image storage */proc/APP_PID/root* directory  
-   `> ls -la proc/1/root/` 
-   The containers' states can be discovered as usual
+   it is possible to access its image storage */proc/APP_PID/root* directory   
+   `> ls -la proc/1/root/`  
+   The containers' states can be discovered as usual  
    `> kubectl describe pod test-pod`  
-   As an ephemeral, it stops after exit.
+   As an ephemeral, it stops after exit.  
    
 3. If the **Pod** *test-pod*  **is failing**, it requires copying the Pod to *test-pod-debug* with a supplemental Container *debugger* based on *--image*  
    `> kubectl debug test-pod -it --image=busybox --container=debugger --copy-to=test-pod-debug --share-processes -- sh`   
@@ -736,7 +736,7 @@ Temporary containers running for debugging
 5. Debug Pod on the given node + privileged mode  
    `> kubectl debug nodes/test-node -it --image=busybox --profile=sysadmin`  
    the test-node filesystem  
-   `> ls /proc/1/root`
+   `> ls /proc/1/root`  
 
 
 ---
@@ -891,8 +891,8 @@ It usually works with a [Headless Service](#^headless-service) to give each Pod 
 > 	- optionally add node targeting rules
 > 3. `kubectl explain ds`
 >
-> Validation:
-> 4. `kubectl get ds test-ds --show-labels`
+> Validation:  
+> 4. `kubectl get ds test-ds --show-labels`  
 > 5. `kubectl get pod -A -l test-ds=test-label -o wide`  
 
 ### Concepts
@@ -1049,8 +1049,8 @@ spec:
 	[StatefulSet](#5.%20StatefulSet) is a use case.      
 	<img src="attachment/8aa0973642968b8f7f68ee4ac8555825.png" width="800" />
     
- 3. Generate a skeleton manifest:
-    `> kubectl create service clusterip test-service --dry-run=client -o yaml --tcp=$port:$targetPort`    
+ 3. Generate a skeleton manifest:  
+    `> kubectl create service clusterip test-service --dry-run=client -o yaml --tcp=$port:$targetPort`     
     or   
     `> kubectl expose pod test-pod --port=$port --target-port=$tport --name test-service --dry-run=client -o yaml`  
  
@@ -1068,7 +1068,7 @@ Generate a skeleton manifest:
    <img src="attachment/ffcdcfafbadd24d6a5f47de5ef19e51e.png" width="800" />  
    The Service Selector binds it to the appropriate Pods based on their *labels*.  
    <img src="attachment/26da45eb5cae824ab28b4102bafee72a.png" width="800" />  
-In the multi-node case, NodePort is created on each of them.
+In the multi-node case, NodePort is created on each of them.  
    
    <img src="attachment/33f73a088c527d5728ae05cc532311b6.png" width="700" />  
 
