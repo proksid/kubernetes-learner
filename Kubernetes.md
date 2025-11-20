@@ -57,8 +57,8 @@
    `> kubectl api-versions`  
    
 	1. Enable/disable the group version   
-	   `> ExecStart=/usr/local/bin/kube-apiserver ... --runtime-config api/all=true,api/v1alpha1 ...    
-	   or  
+	   `> ExecStart=/usr/local/bin/kube-apiserver ... --runtime-config api/all=true,api/v1alpha1 ...`  
+	   or   
 	   `vi /etc/kubernetes/manifests/kube-apiserver.yaml` and edit *--runtime-config*  
 	   
 	2. Convert versions  
