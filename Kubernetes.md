@@ -65,7 +65,7 @@
 	   Install with curl [kuberctl-convert](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)  
 	   `> kubectl convert -f pod-definition.yaml --output-version=apps/v1 > pod-definition-converted.yaml`    
 	   
-	3. Preferred (default) version
+	3. Preferred (default) version  
 	   `> kubectl proxy &`   
 	   `> curl http://localhost:8001/apis`  
 	   or  
@@ -119,19 +119,19 @@ They can be allocated on bare metals, VMs or containers, comprising Pods of the 
 5. **cAdvisor** - Container Advisor retrieves metrics from Nodes and Pods for the API Server  
    `> kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml`  
    `> kubectl get pod metrics-server -n kube-system`  
-6. Get Node's metrics
+6. Get Node's metrics  
    `> kubectl top nodes`  
-   Pod's metrics
+   Pod's metrics  
    `> kubectl top pods -A`  
-   Pod's container metrics
+   Pod's container metrics  
    `> kubectl top pods --containers`
-   Get Pod's metrics sorted by cpu (memory)
+   Get Pod's metrics sorted by cpu (memory)  
    `> kubectl top pods --sort-by=cpu`
-   Get raw data for node cr01-worker
+   Get raw data for node cr01-worker  
    `> kubectl get --raw /api/v1/nodes/cr01-worker/proxy/metrics/resource`  
    
-7. Operations
-   `> systemctl status kubelet`
+7. Operations  
+   `> systemctl status kubelet`  
    `> journalctl -u kubelet`  
    
 ### 2. Kube-Proxy
