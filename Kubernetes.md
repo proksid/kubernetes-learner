@@ -1,6 +1,6 @@
-# Kubernetes CKAD Notes
+<H1>Kubernetes CKAD Notes</H1>
 
-- [Kubernetes CKAD Notes](#kubernetes-ckad-notes)
+
 - [Tools](#tools)
 - [Main components](#main-components)
 	- [Control Plane Nodes](#control-plane-nodes)
@@ -142,6 +142,7 @@
 	- [20. Service MESH](#20-service-mesh)
 - [CKAD Study Resources](#ckad-study-resources)
 
+---
 
 # Tools
 
@@ -407,10 +408,12 @@ See [LimitRange](#273-limitrange) and [ResourceQuota](Kubernetes.md#274-resource
 ### 2.3. POD Affiliation
 #### 2.3.1. **Taints** (Node) / **Tolerations** (Pod)
 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
 > 2. `> kubectl taint node -h`
 > 3. `> kubectl explain pod.spec.tolerations --recursive`
+>
 > Search pattern: *taint*, *toleration*
 
 
@@ -467,9 +470,11 @@ tolerations:
 
 
 #### 2.3.2. **Affinity** (Node: label, Pod: affinity)
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/)
+>
 > Search pattern: *affinity*
 
 **Affinity** binds relevant *Pods* to the specific *Nodes*. However, keep in mind that other *Pods* can also occupy these *Nodes*.  
@@ -532,7 +537,8 @@ nodeName: node01
 ### 2.4. Container Probes
 
 #### 2.4.1 Probe Types
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 > 2. `kubectl explain pods.spec.containers`  
 >   
@@ -637,7 +643,8 @@ With `PodLevelResources` [feature gate](https://kubernetes.io/docs/reference/com
  - Priority: When both pod-level and container-level resources are specified, pod-level resources take precedence.
 
 #### 2.7.1. Per Container / Pod
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 > 2. [Tasks CPU](https://kubernetes.io/docs/tasks/configure-pod-container/assign-cpu-resource/)
 > 3. [Tasks Memory](https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/)
@@ -659,8 +666,11 @@ If resources are defined on both levels - Pod and Containers, the **Pod is prece
 *.spec.containers.[\*].resizePolicy*  defines cpu/memory resize with or without restart 
 
 --
+
+
 #### 2.7.2. QoS Class 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/quality-service-pod/)
 > 
 > Search patterns: *qosclass*
@@ -674,7 +684,8 @@ If resources are defined on both levels - Pod and Containers, the **Pod is prece
 
 --  
 #### 2.7.3. LimitRange
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/policy/limit-range/) and then lots of examples at the bottom
 > 
 > Search patterns: *limitrange*
@@ -701,7 +712,8 @@ You get `403 Forbidden` if over the limit: cpu, memory, storage
 --  
 #### 2.7.4. ResourceQuota
 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/policy/resource-quotas/)
 > 2. `> kubectl create quota -h`
 > 
@@ -735,7 +747,8 @@ When a *quota* is defined for the given namespace, the resources for Pod/Contain
 ### 2.8. Pod / Container Security Context
 Tools to manage pod and container privileges and access   
 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 > 3. `kubectl explain pods.spec.securityContext --recursive`
@@ -889,7 +902,8 @@ Temporary containers running for debugging
 ---
 
 ## 4. Deployment  
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `> kubectl create deployment -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 > 3. [Tasks](https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/)
@@ -978,7 +992,8 @@ Imperatively, scale up v2 and scale out v1.
 ---
 
 ## 5. StatefulSet
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `kubectl create deployment --dry-run=client ...`, 
 > 	- then replace kind with *kind: StatefulSet*
 > 	- remove *spec.strategy* (it uses *spec.updateStrategy* instead)
@@ -1017,7 +1032,8 @@ It usually works with a [Headless Service](#^headless-service) to give each Pod 
 
 ## 6. DaemonSet
 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)
 > 2. `kubectl create deployment --dry-run=client ...`
 > 	- then replace kind with *kind: DaemonSet*
@@ -1069,7 +1085,8 @@ The binding mechanism to the Nodes is the same as for the user.
 ---
 
 ## 7. Job
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `kubectl create job -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/job/)
 > 3. `kubectl explain jobs.spec --recursive`
@@ -1117,7 +1134,8 @@ spec:
 
 ## 8. CrontabJob
 
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `kubectl create cronjobs -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
 > 3. `kubectl explain cronjobs.spec --recursive`
@@ -1167,7 +1185,8 @@ spec:
 
 
 ### 9.2. Service
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `kubectl create service -h`
 > 2. `kubectl expose -h`
 >
@@ -1225,7 +1244,7 @@ TODO
 
 
 ### 9.3. Ingress
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 > 1. `kubectl create ingress -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/services-networking/ingress/)
@@ -1291,7 +1310,8 @@ TODO
 ---
 
 ### 9.4. EndpointSlices
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
 >
 > Search patterns: *entrypointslices*
@@ -1308,7 +1328,7 @@ A set of network endpoints (ip-addresses) and ports
 ---
 
 ### 9.5. NetworkPolicy
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 > 1. [Conception](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 > 2. [Tasks](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/)
@@ -1385,7 +1405,8 @@ Or the debug container
 ---
 
 ## 10. ConfigMap
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. `kubectl create configmap -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) (lots of examples)
 > 3. [Concepts](https://kubernetes.io/docs/concepts/configuration/configmap/) (enough examples)
@@ -1481,7 +1502,7 @@ From a directory that comprises several config files
 ---
 
 ## 11. Secret
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 >1. `kubectl create secret -h`
 >2. [Tasks](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/)
@@ -1579,7 +1600,7 @@ Extract data
 ---
 
 ## 12. ServiceAccount
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 > 1. `kubectl create sa -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
@@ -1770,7 +1791,7 @@ Get label:
 *PersistentVolume* PV [cluster-scoped] and  *PersistentVolumeClaim* PVC [namespaced] lifecycle  
 *PVC* serves to decouple a Pod from *PV*  
 
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
@@ -1962,7 +1983,7 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 ---
 
 ## 18. HELM
-> [!TIP] CKAD helps
+> **CKAD hints**
 > 
 > 1. [Docs](https://helm.sh/docs/)
 > 2. [Cheat Sheet](https://helm.sh/docs/intro/cheatsheet/)
@@ -2020,12 +2041,15 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 ---
 
 ## 19. Kustomize
-> [!TIP] CKAD helps
+> **CKAD hints**
+> 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
+>    
+>Search patterns: *kustomize*
 
 > External Links (out of CKAD):
-> 1. [Docs](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/)
-> 2. GitHub](https://github.com/kubernetes-sigs/kustomize)
+> 2. [Docs](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/)
+> 3. [GitHub](https://github.com/kubernetes-sigs/kustomize)
 
 ### Concepts
 1. Config stages and params
@@ -2129,7 +2153,7 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
    The official documentation is the main reference for both the exam and real-world work. You should know how to quickly navigate the key sections:
    - [Concepts](https://kubernetes.io/docs/concepts/)
    - [Tasks](https://kubernetes.io/docs/tasks/)
-   - In the exam environment, prioritize (this doc resources have a priority section "CKAD helps"):  
+   - In the exam environment, prioritize (this doc resources have a priority section "CKAD hints"):  
 	   - `kubectl <subcommand> -h` is the fastest way  
 	   - `kubectl explain <resources>` for details. Although some resource manifests cannot be generated imperatively (e.g. PV, PVC)  
 2. Udemy - [Kubernetes Certified Application Developer (CKAD) with Tests](https://www.udemy.com/course/certified-kubernetes-application-developer)  
