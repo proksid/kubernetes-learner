@@ -1,146 +1,5 @@
-<H1>Kubernetes CKAD Notes</H1>
 
-
-- [Tools](#tools)
-- [Main components](#main-components)
-	- [Control Plane Nodes](#control-plane-nodes)
-		- [1. API](#1-api)
-		- [2. Controller manager](#2-controller-manager)
-		- [3. Scheduler](#3-scheduler)
-		- [4. ETCD](#4-etcd)
-	- [Working Nodes](#working-nodes)
-		- [1. Kubelet](#1-kubelet)
-		- [2. Kube-Proxy](#2-kube-proxy)
-		- [3. Container Runtime Interface (**CRI and CRI shims**)](#3-container-runtime-interface-cri-and-cri-shims)
-		- [4. Addons](#4-addons)
-		- [5. Network Communication](#5-network-communication)
-		- [6. Component communication examples](#6-component-communication-examples)
-- [Resources](#resources)
-	- [1. Namespace](#1-namespace)
-		- [1.1. Secure isolation](#11-secure-isolation)
-		- [1.2. Scale space of names](#12-scale-space-of-names)
-		- [1.3. Resource restriction](#13-resource-restriction)
-		- [Operations](#operations)
-	- [2. Pods / Containers](#2-pods--containers)
-		- [2.1. Operations](#21-operations)
-		- [2.2. POD lifecycle](#22-pod-lifecycle)
-		- [2.3. POD Affiliation](#23-pod-affiliation)
-			- [2.3.1. **Taints** (Node) / **Tolerations** (Pod)](#231-taints-node--tolerations-pod)
-			- [2.3.2. **Affinity** (Node: label, Pod: affinity)](#232-affinity-node-label-pod-affinity)
-			- [2.3.3. nodeSelector](#233-nodeselector)
-			- [2.3.4. nodeName](#234-nodename)
-		- [2.4. Container Probes](#24-container-probes)
-			- [2.4.1 Probe Types](#241-probe-types)
-				- [1. startupProbe](#1-startupprobe)
-				- [2. readinessProbe](#2-readinessprobe)
-				- [3. livenessProbe](#3-livenessprobe)
-			- [2.4.2. Container Probe check mechanism](#242-container-probe-check-mechanism)
-			- [2.4.3. Container Probe configuration](#243-container-probe-configuration)
-		- [2.5. Container lifecycle/status](#25-container-lifecyclestatus)
-		- [2.6. Container command/args](#26-container-commandargs)
-		- [2.7. Pod / Container Resources](#27-pod--container-resources)
-			- [2.7.1. Per Container / Pod](#271-per-container--pod)
-			- [2.7.2. QoS Class](#272-qos-class)
-			- [2.7.3. LimitRange](#273-limitrange)
-			- [2.7.4. ResourceQuota](#274-resourcequota)
-		- [2.8. Pod / Container Security Context](#28-pod--container-security-context)
-			- [2.8.1. Per Container / Per Pod](#281-per-container--per-pod)
-			- [2.8.2. Per Container](#282-per-container)
-		- [2.9. Container types and multi-container pods](#29-container-types-and-multi-container-pods)
-			- [2.9.1. Application containers *.spec.containers*](#291-application-containers-speccontainers)
-			- [2.9.2 Init Containers *.spec.initContainers*](#292-init-containers-specinitcontainers)
-			- [2.9.3. Sidecar containers *.spec.initContainers*](#293-sidecar-containers-specinitcontainers)
-			- [2.9.4. Ephemeral containers](#294-ephemeral-containers)
-		- [2.10. Troubleshooting](#210-troubleshooting)
-			- [2.10.1. Events](#2101-events)
-			- [2.10.2. Logs](#2102-logs)
-			- [2.10.3. Debug](#2103-debug)
-	- [3. ReplicaSet (ReplicationController)](#3-replicaset-replicationcontroller)
-	- [4. Deployment](#4-deployment)
-		- [4.1. Update strategy.](#41-update-strategy)
-			- [4.1.1. Built-in strategies](#411-built-in-strategies)
-			- [4.1.2. Blue / Green](#412-blue--green)
-			- [4.1.3. Canary](#413-canary)
-			- [Update global params](#update-global-params)
-		- [4.2. The ways to roll out](#42-the-ways-to-roll-out)
-		- [4.3. Roll back](#43-roll-back)
-	- [5. StatefulSet](#5-statefulset)
-		- [Concepts](#concepts)
-		- [Use cases](#use-cases)
-	- [6. DaemonSet](#6-daemonset)
-		- [Concepts](#concepts-1)
-		- [Use cases](#use-cases-1)
-	- [7. Job](#7-job)
-		- [Concepts](#concepts-2)
-		- [Parameters:](#parameters)
-	- [8. CrontabJob](#8-crontabjob)
-		- [Concepts](#concepts-3)
-		- [Parameters](#parameters-1)
-	- [9. Networking](#9-networking)
-		- [9.1. Container Network Interfaces / CNI](#91-container-network-interfaces--cni)
-		- [9.2. Service](#92-service)
-			- [9.2.1. ClusterIP](#921-clusterip)
-			- [9.2.2. NodePort](#922-nodeport)
-			- [9.2.3. LoadBalancer](#923-loadbalancer)
-			- [9.2.4. External Name](#924-external-name)
-			- [9.2.5. External IPs](#925-external-ips)
-		- [9.3. Ingress](#93-ingress)
-		- [Types of Ingress](#types-of-ingress)
-		- [9.4. EndpointSlices](#94-endpointslices)
-		- [9.5. NetworkPolicy](#95-networkpolicy)
-		- [Concepts](#concepts-4)
-		- [9.6. Network Tools](#96-network-tools)
-			- [9.6.1. Port Forwarding](#961-port-forwarding)
-			- [9.6.2. Test pod](#962-test-pod)
-	- [10. ConfigMap](#10-configmap)
-		- [10.1. Literal config](#101-literal-config)
-		- [10.2. Env config file](#102-env-config-file)
-		- [10.3. Config file/directory](#103-config-filedirectory)
-	- [11. Secret](#11-secret)
-		- [Concepts](#concepts-5)
-		- [11.1. Literal secret](#111-literal-secret)
-		- [11.2. Env secret file](#112-env-secret-file)
-		- [11.3. Secret file](#113-secret-file)
-		- [11.4. Secret TLS](#114-secret-tls)
-		- [11.5. Declarative-way Secret](#115-declarative-way-secret)
-	- [12. ServiceAccount](#12-serviceaccount)
-		- [Concepts](#concepts-6)
-		- [Typical workflow](#typical-workflow)
-	- [13. AAA Security](#13-aaa-security)
-		- [13.1. Authentication](#131-authentication)
-		- [13.2. Authorization](#132-authorization)
-		- [13.3. Admission control](#133-admission-control)
-			- [13.3.1. Types of Admission Controllers:](#1331-types-of-admission-controllers)
-			- [13.3.2. Built-in PodSecurity Admission controller](#1332-built-in-podsecurity-admission-controller)
-			- [13.3.3. Operations](#1333-operations)
-	- [14. Monitoring](#14-monitoring)
-	- [15. Volumes](#15-volumes)
-		- [15.1. Volume definition and usage](#151-volume-definition-and-usage)
-		- [15.2. Volume Types and Drivers](#152-volume-types-and-drivers)
-			- [15.2.1. Volume Types](#1521-volume-types)
-			- [15.2.2. In-Tree Volume drivers](#1522-in-tree-volume-drivers)
-			- [15.2.3. Container Storage Interface (CSI)](#1523-container-storage-interface-csi)
-		- [15.3. PersistentVolume / PersistentVolumeClaim Lifecycle](#153-persistentvolume--persistentvolumeclaim-lifecycle)
-			- [15.3.1. Provisioning Types.](#1531-provisioning-types)
-				- [1. Static: **PVC -\> PV**](#1-static-pvc---pv)
-				- [2. Dynamic: **PVC -\> PV StorageClasses**](#2-dynamic-pvc---pv-storageclasses)
-			- [15.3.2. Binding criteria.](#1532-binding-criteria)
-			- [15.3.3. Usage](#1533-usage)
-			- [15.3.4. Parameters.](#1534-parameters)
-		- [15.4. VolumeClaimTemplate](#154-volumeclaimtemplate)
-	- [16. Kubernetes Extensions](#16-kubernetes-extensions)
-	- [17. Custom Resource Definition (**CRD**)](#17-custom-resource-definition-crd)
-		- [17.1. Operation](#171-operation)
-		- [17.2. Operator](#172-operator)
-	- [18. HELM](#18-helm)
-		- [18.1. Repository / Hub](#181-repository--hub)
-		- [18.2. Install](#182-install)
-		- [18.3. LifeCycle/Upgrade](#183-lifecycleupgrade)
-	- [19. Kustomize](#19-kustomize)
-		- [Concepts](#concepts-7)
-		- [Operations](#operations-1)
-	- [20. Service MESH](#20-service-mesh)
-- [CKAD Study Resources](#ckad-study-resources)
+# Kubernetes CKAD Notes
 
 ---
 
@@ -233,13 +92,13 @@
 
 
 ### 4. ETCD
-1. Distributed strongly consistent [key-value database](DB%20Types%20and%20Data%20Model.md) for K8s cluster states
+1. Distributed strongly consistent key-value database for K8s cluster states
 2. Data added, not replaced, periodically compacted
 3. Only the API communicates with it
 4. **etcdctl** utility
 5. It can be stacked within the Control Plane or be external storage
-6. etcd is based on the [Raft Consensus Algorithm](https://raft.github.io/) which allows a collection of machines to work as a coherent group that can survive the failures of some of its members.
-7. etcd is also used to store configuration details such as subnets, ConfigMaps, Secrets, etc  
+6. ETCD is based on the [Raft Consensus Algorithm](https://raft.github.io/), which allows a collection of machines to work as a coherent group that can survive the failures of some of its members.
+7. ETCD is also used to store configuration details such as subnets, ConfigMaps, Secrets, etc  
    
    <img src="attachment/d487f23bc7c272ffd89bb041d48a5cc7.png" style='width: 800px;' />  
    <img src="attachment/56566fd294621abd812652c910578562.png" style='width: 800px;' />  
@@ -298,6 +157,8 @@ They can be allocated on bare metals, VMs or containers, comprising Pods of the 
 	2. **nerdctl** (control containerd, docker-like, friendly)
 	3. **Docker** (control Docker)
 	4. **crictl** (control Kubernetes CRI compatible containers, debug and inspect)
+	   
+	   <img src="attachment/d31f4b8cdea786b824a47cdb436dd8e1.png" style='width: 800px;' />
 	   
 4. CRI examples:
 	1. **containerd** plugin (aka cri-containerd)  
@@ -1008,7 +869,7 @@ Imperatively, scale up v2 and scale out v1.
 
 ### Concepts
 
-The _StatefulSet_ is a workload resource for running **stateful applications** that need **stable network identities and persistent storage** for each Pod replica.  
+The _StatefulSet_ is a workload resource for running **stateful applications** that need **stable network identities and persistent storage** for each Pod replica. Thus, it provides sticky identities for Replica Pods.   
 It usually works with a [Headless Service](#^headless-service) to give each Pod its own DNS name (e.g. db-0, db-1, …), which is critical for systems such as databases, queues, and clustered storage engines.  
 
    <img src="attachment/89c9363881723c13e5190a9258998e14.png" style='width: 700px;' />  
@@ -2015,7 +1876,7 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 	  `> helm install app-nginx bitnami/nginx --version 12.0.6 --namespace ns-helm --set replicaCount=2`  
 	  
 	- Install a chart using a customized value file  
-	  `> helm install RELEASE-NAME REPO/CHART-NAME --velues CUSTOMIZED-VALUES.yaml`  
+	  `> helm install RELEASE-NAME REPO/CHART-NAME --values CUSTOMIZED-VALUES.yaml`  
      
 1. Retrieve info from the installed chart  
 	- Get the list of all installed releases in different statuses and all namespaces  
@@ -2150,10 +2011,10 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 
 # CKAD Study Resources
 1. [Kubernetes Docs](https://kubernetes.io/docs/home/) (Primary source of Truth)
-   The official documentation is the main reference for both the exam and real-world work. You should know how to quickly navigate the key sections:
+   The official documentation is the main reference for both the exam and real-world work. You should know how to navigate the key sections quickly:
    - [Concepts](https://kubernetes.io/docs/concepts/)
    - [Tasks](https://kubernetes.io/docs/tasks/)
-   - In the exam environment, prioritize (this doc resources have a priority section "CKAD hints"):  
+   - In the exam environment, prioritize (this doc's resources have a priority section "CKAD hints"):  
 	   - `kubectl <subcommand> -h` is the fastest way  
 	   - `kubectl explain <resources>` for details. Although some resource manifests cannot be generated imperatively (e.g. PV, PVC)  
 2. Udemy - [Kubernetes Certified Application Developer (CKAD) with Tests](https://www.udemy.com/course/certified-kubernetes-application-developer)  
@@ -2167,7 +2028,7 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 7. Some helpful experience and advice:
    - https://kavinduchamiran.medium.com/my-two-cents-on-passing-ckad-in-2022-ffbb7f1c65be
    - https://medium.com/@codebob75/passing-ckad-cheatsheet-notes-and-tips-1aa285e6a473
+8. If you want container prep explained with 'surgical' precision, [Ivan Velichko's Lab](https://iximiuz.com/en/) is it.
    
-
 
 ---
