@@ -39,13 +39,17 @@
 
 <img src="attachment/501415dba02e382dc950e857778ed7f2.png" />
 
+
+---  
+
 ## Control Plane Nodes
-### 1. API
-1. The cluster gateway
+### 1. API Server
+1. The cluster gateway - all other K8s components communicate exclusively via the API Server.
 2. Exposes a controlling RESTful API
 3. Routes secondary/custom APIs
 4. All other components communicate with ETCD via API
-5. Authentication gatekeeper
+5. [AAA](#13-aaa-security) gatekeeper.  
+   
    Endpoint examples   
    <img src="attachment/2c25958a84f1854139c28a0e6f6ce802.png" style='width: 800px;' />    
 6. [API Cluster access](Set%20up%20Cluster%20access.md)  
@@ -72,50 +76,62 @@
 	   
 9. API [available/enabled/disabled admission controllers](#1333-operations)  
 
-
+--
 ### 2. Controller manager
 1. Watches for cluster state changes via API, comparing desired (declared) states and current ones
 2. Manages controllers (e.g. ReplicaSet controller) or operators to restore consistent states of pods, endpoints, service accounts and tokens
 3. Cloud CM communicates with the cloud infrastructure layer to manage nodes, volumes, load balancers and routes  
   
-
+--
 ### 3. Scheduler
 1. Decides on a new node’s discovery
 2. Distributes pods based on some factors:
 	1. pods’ requirements vs node resources
 	2. data locality
 	3. affinity and anti-affinity spec
-	4. taints, tolerations
+	4. [Node Taints, Pod Tolerations](#231-node-taints--pod-tolerations)
 	5. etc
 
 3. Returns decisions to the API for further workload deployment delegation  
 
-
+--
 ### 4. ETCD
-1. Distributed strongly consistent key-value database for K8s cluster states
-2. Data added, not replaced, periodically compacted
-3. Only the API communicates with it
-4. **etcdctl** utility
-5. It can be stacked within the Control Plane or be external storage
-6. ETCD is based on the [Raft Consensus Algorithm](https://raft.github.io/), which allows a collection of machines to work as a coherent group that can survive the failures of some of its members.
-7. ETCD is also used to store configuration details such as subnets, ConfigMaps, Secrets, etc  
+1. [ETCD](https://github.com/etcd-io/etcd/releases) stores configuration data as subnets, ConfigMaps, Secrets, etc, and state information and metadata for the entire cluster.
+2. It is a strongly consistent key-value database. Data added, not replaced, periodically compacted. 
+3. Its redundant cluster is based on the [Raft Consensus Algorithm](https://raft.github.io/), which allows a collection of machines to work as a coherent group that can survive the failures of some of its members.
+4. Only the *API Server* communicates with it.
+5. ETCD provides REST API and gRPC. **etcdctl** utility for low-level communication and debugging via gRPC.
+6. It can be stacked within the Control Plane or be external storage.  
+   
+   
+
+
    
    <img src="attachment/d487f23bc7c272ffd89bb041d48a5cc7.png" style='width: 800px;' />  
    <img src="attachment/56566fd294621abd812652c910578562.png" style='width: 800px;' />  
 
+
+---  
+
 ## Working Nodes
 They can be allocated on bare metals, VMs or containers, comprising Pods of the Control Plane as well as “regular” ones.  
-
-### 1. Kubelet
-1. Communicate with the *API* and *CRI*
-2. Register and serve nodes
-3. Manage pods/containers deployed by Kubernetes, checking out and reporting their states to the *API*
-4. Serve (without *API*) the special **Static Pod**s
 	<img src="attachment/0a42f794f4bf5fb6fedac90f8d55a190.png" style='width: 800px;' />
-5. **cAdvisor** - Container Advisor retrieves metrics from Nodes and Pods for the API Server   
+### 1. Kubelet
+1. Communicate with the [API Server](#1-api-server) and [Container Runtime](#3-container-runtime-cri-and-cri-shims).
+2. Register and serve nodes.
+3. Manage pods/containers deployed by Kubernetes via *CRI*, checking out and reporting their states to the *API Server*
+4. Serve directly (without *API Server*) the special [**Static Pod**s](https://kubernetes.io/docs/concepts/workloads/pods/#static-pods)
+	1. self-served control plane
+	2. mirror this Pod to the *API Server*  
+	   
+5. Provide *kubelet API* for *API Server* (kubeletctl utl as well) access via:
+	1. *RESTful* for read-only requests: kubelet health, pods/nodes stats/metrics, pod info, container logs.
+	2. *WebSocket* for streaming exec, attach, port-forwarding.  
+	   
+6. **cAdvisor** - Container Advisor retrieves metrics from Nodes and Pods for the API Server   
    `> kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml`   
    `> kubectl get pod metrics-server -n kube-system`   
-6. Get Node's metrics  
+7. Get Node's metrics  
    `> kubectl top nodes`   
    Pod's metrics  
    `> kubectl top pods -A`   
@@ -126,7 +142,7 @@ They can be allocated on bare metals, VMs or containers, comprising Pods of the 
    Get raw data for node cr01-worker  
    `> kubectl get --raw /api/v1/nodes/cr01-worker/proxy/metrics/resource`   
    
-7. Operations  
+8. Operations  
    `> systemctl status kubelet`  
    `> journalctl -u kubelet`  
    
@@ -138,35 +154,73 @@ They can be allocated on bare metals, VMs or containers, comprising Pods of the 
 	1. Cilium (eBPF-based)
 	2. KPNG (Kubernetes Proxy Next Gen)
 	   
-### 3. Container Runtime Interface (**CRI and CRI shims**)
-1. Serve containers that meet the **OCI** Open Container Initiative
-	1. imagespec - build container spec - ImageService
-	2. runtimespec - container deployment spec - RuntimeService
+---  
 
-2. Examples CRI:
+### 3. Container Runtime, CRI and CRI shims
+#### 3.1. Responsibilities - RuntimeService and ImageService
+1. **Pod & Container Lifecycle Management (runtimespec)**
+    Own object lifecycle and reconciliation: create/start/stop/delete containers and PodSandboxes; persist and recover state across restarts; collect exit status; handle failure scenarios.
+2. **Resource Isolation and Enforcement**
+    Configure cgroups (CPU/memory/IO), namespaces, and security settings (seccomp/AppArmor/SELinux/capabilities) via OCI config passed to the low-level runtime; ensure enforcement and consistency.
+3. **Runtime Delegation**
+    Delegate actual spawn/exec to OCI runtimes (runc/crun/runsc/kata) and support pluggable runtime selection.
+4. **Image Management / Image Policy / Security Integration (imagespec)**
+    Pull/store content-addressed layers, unpack and dedupe layers; manage image metadata; integrate with registries.
+    Integrate with signature/policy systems (where configured) and enforce configured trust policy; ensure rootfs integrity at unpack/mount time.    
+5. **Garbage Collection**
+    GC unused images + snapshots + containers + sandboxes to reclaim storage and avoid leaks.
+6. **Filesystem / Storage Management**
+    Assemble rootfs from snapshots (overlayfs, etc.), manage mounts, lifecycle, and cleanup.
+7. **Network Namespace Management (handoff to CNI)**
+    Create/own netns for PodSandbox; provide netns handle to CNI; teardown on sandbox deletion.
+8. **Observability & Introspection**
+    Expose events/metrics/health; provide container status; support log configuration/paths; support exec/attach streaming endpoints (implementation-dependent).
 
-	1. [CRI-O](https://cri-o.io/)
-	2. Docker via cri-dockerd (docker-shim till v1.24)
-	3. Mirantis Container Runtime (MCR)
-	4. Podman
-	5. Rocket Rkt
+#### 3.2. Scope/definitions
+1. **CRI** is the contract/spec that the **kubelet** communicates with the Runtime; the **gRPC API** is its implementation as part of the Runtime (CRI-O) or as a plugin (cri-containerd).
+2. **CRI Runtime daemon**: the process the **kubelet** talks to over CRI (e.g., **containerd**, **CRI-O**).
+3. **Low-level runtime (OCI / sandbox runtime)**: the component the daemon calls to actually create/exec the container process (e.g., **runc**, **crun**, **runsc**, **kata-runtime**).
 
-3. Utilities to compare
+#### 3.3. CRI Utilities
+1. **ctr** (control **containerd**, , communicate with containerd's native API, not friendly, debug useful)
+2. [**nerdctl**](https://github.com/containerd/nerdctl) (control **containerd**, communicate with containerd's native API, docker-like, friendly)
+3. **Docker** (control Docker)
+4. **crictl** (control Kubernetes CRI compatible containers, debug and inspect, communicate with *CRI API* as well as *kubelet*)
+   
+   
+   
+   <img src="attachment/d31f4b8cdea786b824a47cdb436dd8e1.png" style='width: 800px;' />
+   
+#### 3.4. CRI examples
+1. **containerd** plugin (aka cri-containerd)  
+   
+   <img src="attachment/99f4a2118eb06ef6a446ca8f681cd666.png" style='width: 800px;' />
+2. **cri-dockerd**  
+   
+   <img src="attachment/83cd77af773c7a1677e755a142f8b58e.png" style='width: 800px;' />
 
-	1. **ctr** (control containerd, not friendly, debug useful)
-	2. **nerdctl** (control containerd, docker-like, friendly)
-	3. **Docker** (control Docker)
-	4. **crictl** (control Kubernetes CRI compatible containers, debug and inspect)
-	   
-	   <img src="attachment/d31f4b8cdea786b824a47cdb436dd8e1.png" style='width: 800px;' />
-	   
-4. CRI examples:
-	1. **containerd** plugin (aka cri-containerd)  
-	   
-	   <img src="attachment/99f4a2118eb06ef6a446ca8f681cd666.png" style='width: 800px;' />
-	2. **cri-dockerd**  
-	   
-	   <img src="attachment/83cd77af773c7a1677e755a142f8b58e.png" style='width: 800px;' />
+#### 3.5. Kubernetes CRI Chain Reference
+
+| CRI Socket        | Runtime Implementation (daemon)                          | Low-level Runtime | Typical Chain                                                                               | Notes                                                                                                                                                                                             |
+| ----------------- | -------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| containerd CRI    | containerd (built-in `io.containerd.grpc.v1.cri` plugin) | runc              | `kubelet → CRI gRPC → containerd → shim → runc`                                             | Most common Kubernetes setup today                                                                                                                                                                |
+| containerd CRI    | containerd (built-in `io.containerd.grpc.v1.cri` plugin) | crun              | `kubelet → CRI → containerd → shim → crun`                                                  | Alternative OCI runtime; lighter footprint, better performance                                                                                                                                    |
+| containerd CRI    | containerd (built-in `io.containerd.grpc.v1.cri` plugin) | runsc (gVisor)    | `kubelet → CRI → containerd → shim → runsc`                                                 | User-space kernel sandbox; selected via RuntimeClass                                                                                                                                              |
+| containerd CRI    | containerd (built-in `io.containerd.grpc.v1.cri` plugin) | kata-runtime      | `kubelet → CRI → containerd → containerd-shim-kata-v2 → kata-runtime → QEMU/CH/Firecracker` | Containers in lightweight VMs; shim carries isolation logic; VMM backend pluggable (QEMU default, Cloud Hypervisor/Firecracker preferred in production); selected via RuntimeClass                |
+| CRI-O             | CRI-O                                                    | crun              | `kubelet → CRI → CRI-O → crun`                                                              | CRI-O purpose-built for Kubernetes CRI; crun default on RHEL/OpenShift                                                                                                                            |
+| CRI-O             | CRI-O                                                    | runc              | `kubelet → CRI → CRI-O → runc`                                                              | OCI runtime pluggability; runc also supported                                                                                                                                                     |
+| cri-dockerd       | cri-dockerd → dockerd → containerd                       | runc              | `kubelet → CRI → cri-dockerd → dockerd → containerd → shim → runc`                          | Legacy/transition path post-dockershim removal; maintained by Mirantis; modern Docker uses containerd internally making this path redundant                                                       |
+| cri-dockerd (MCR) | cri-dockerd → MCR → containerd                           | runc              | `kubelet → CRI → cri-dockerd → MCR → containerd → shim → runc`                              | Mirantis enterprise path; MCR is a hardened, FIPS 140-2 validated Docker Engine fork; targets regulated industries (federal, financial) with existing Docker investment; commercial SLA supported |
+
+**Key Architectural Notes**
+- *CRI socket* is the Unix socket endpoint Kubelet connects to via gRPC, configured via `--container-runtime-endpoint`
+- *shim* (`containerd-shim-runc-v2`) decouples container process lifecycle from the containerd daemon - daemon restarts do not affect running containers
+- *RuntimeClass* is the Kubernetes mechanism enabling multi-runtime coexistence on a single node (e.g. runc alongside gVisor or Kata)
+- *CRI-O vs containerd* - peers at the CRI layer; choice is ecosystem-driven (OpenShift/RHEL vs general Kubernetes)
+- *cri-dockerd / MCR* - both ultimately route through containerd and runc; the added hops make these paths architecturally redundant for general use; MCR's value is compliance and commercial support, not runtime differentiation
+
+---  
+
 ### 4. Addons
 1. DNS
 2. Dashboard
@@ -221,9 +275,18 @@ See [LimitRange](#273-limitrange) and [ResourceQuota](Kubernetes.md#274-resource
 ## 2. Pods / Containers
 **Pods** are allocated in Nodes and comprise containers. The containers within the same pod communicate with each other via localhost.
 
-1. Pod is a collection of one or more containers and volumes, where they share the same IP addresses  
+### 1. Pod
+A collection of one or more containers and volumes, where they share the same IP addresses  
    <img src="attachment/17589c76ef45ce46327f521ce2272712.png" style='width: 500px;' />  
-2. **Static Pods** - Kubernetes serving special pods which manifests are allocated in Nodes, so only local *kubelet* serves them without the *API* and mirrors to the *API*  
+### 2. [Static Pods](#1-kubelet)
+Special pods that manifests are allocated in Nodes, so only the local *kubelet* serves them without the *API Server* and mirrors to the *API Server*
+ > **CKA hints**
+ >
+ > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
+ > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/pods/#static-pods)
+ > 
+ > Search patterns: *static pods*
+
 
 ### 2.1. Operations
 1. Generate a skeleton manifest  
@@ -267,7 +330,7 @@ See [LimitRange](#273-limitrange) and [ResourceQuota](Kubernetes.md#274-resource
 	   
 
 ### 2.3. POD Affiliation
-#### 2.3.1. **Taints** (Node) / **Tolerations** (Pod)
+#### 2.3.1. Node Taints / Pod Tolerations
 
 > **CKAD hints**
 > 
@@ -330,7 +393,8 @@ tolerations:
 ```  
 
 
-#### 2.3.2. **Affinity** (Node: label, Pod: affinity)
+#### 2.3.2. Node Label / Pod Affinity
+
 > **CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
@@ -340,13 +404,15 @@ tolerations:
 
 **Affinity** binds relevant *Pods* to the specific *Nodes*. However, keep in mind that other *Pods* can also occupy these *Nodes*.  
 
+**Label Nodes**. 
 Get the node’s labels:  
 `> kubectl get nodes --show-labels`  
    
 Assign label:  
 `> kubectl label nodes test-node KEY1=VAL1`  
 	
-Configure *Pod*spec per affinity type:  
+**Create Pod Affinity**. 
+Configure *Pod* spec per affinity type:  
 
 1. *requiredDuringSchedulingIgnoredDuringExecution* - schedule if an appropriately labelled node exists or not at all  
 ```yaml
@@ -514,17 +580,26 @@ With `PodLevelResources` [feature gate](https://kubernetes.io/docs/reference/com
 > Search patterns: *resources cpu*
 
 **Resources declaration**
+**1. Per Container**
 *.spec.containers[\*].resources*
- - *requests* - desired (minimum) amount of resources
- - *limits* - maximum amount of resources - 
-	 - memory: Mi - pod is terminated
-	 - cpu: m - pod is throttled
+ - *requests*: desired (minimum) amount of resources; kube-schedule decides which node to place the Pod on; otherwise, the Pod is pending.
+ - *limits* - maximum amount of resources - **kubelet** enforces the limits to avoid the Container from overuse (by Linux cgroups)
+	 - *memory*: Mi/M/Gi/G - the Pod may be terminated (OOMkilled) under memory pressure
+	 - *cpu*: m - the Container is throttled
+	 - *hugepages-(sizeMi/Gi)*: Mi/M/Gi/G - allows abnormal memory page <sizeMi/Gi> in Linux 
+	 - *ephemeral-storage*: Mi/M/Gi/G - counts volume for the individual Container and sums up for the Pod [with the scanning procedure or using FS project quota mechanism](https://kubernetes.io/docs/concepts/storage/ephemeral-storage/#resource-emphemeralstorage-consumption) (Pod is evicted at overload): 
+		 - *emptyDir* (not in case of *media: Memory*)
+		 - logs volume (Node-level logs of the Container apps)
+		 - writable layer of the Container
+
+
+**2. Per Pod**
+*.spec.resources* - Pod scope resources (cpu, memory, hugepages) are available if `--feature-gates=PodLevelResources=true` is enabled.
 	
-Overlimit of *limits* - Pod is running, but Containers are restarting, over *limits* of the Node - Pod is pending.  
-If resources are defined on both levels - Pod and Containers, the **Pod is preceded**!  
+If resources are defined at both levels - Pod and Container, the **Pod is preceded**!
 
 **Resize policy**
-*.spec.containers.[\*].resizePolicy*  defines cpu/memory resize with or without restart 
+*.spec.containers.[\*].resizePolicy*  - defines cpu/memory resize with or without restart 
 
 --
 
@@ -716,7 +791,7 @@ Temporary containers running for debugging
    
 
 #### 2.10.3. Debug
-1. If a given Container *test-app-container* is running and has a shell, it is possible to inspect it  
+1. If a given **Container** *test-app-container* is running and has a shell, it is possible to inspect it  
    `> kubectl exec test-pod -it -c test-app-container -- sh`  
    or attach to its running process  
    `> kubectl attach test-pod -it -c test-app-container`  
@@ -731,7 +806,7 @@ Temporary containers running for debugging
    `> kubectl describe pod test-pod`    
    As an ephemeral, it stops after exit.  
    
-4. If the **Pod **  *test-pod*  **is failing**, it requires copying the Pod to *test-pod-debug* with a supplemental Container *debugger* based on *--image*  
+4. If the **Pod**  *test-pod*  **is failing**, it requires copying the Pod to *test-pod-debug* with a supplemental **Container** *debugger* based on *--image*  
    `> kubectl debug test-pod -it --image=busybox --container=debugger --copy-to=test-pod-debug --share-processes -- sh`   
    Then the debug Pod *test-pod-debug* needs to be removed manually.  
    
@@ -1146,7 +1221,7 @@ TODO
 	apiVersion: networking.k8s.io/v1
 	kind: Ingress
 	metadata:
-	  name: test-ingress
+	 name: test-ingress
 	spec:
 	  ingressClassName: default
 	  defaultBackend:
@@ -1394,7 +1469,7 @@ type: Opaque
 ```
 
  Usage as env vars per variable *secretKeyRef*  
- ```yaml
+```yaml
 env:
   - name: APP_VAR1
     valueFrom:
@@ -1409,6 +1484,7 @@ envFrom:
   - secretRef:
       name: test-secret
 ``` 
+
 
 Check  
 `> kubectl exec -i -t test-pod -- /bin/sh -c 'echo $APP_VAR1'`   
@@ -1617,17 +1693,17 @@ Get label:
 		2. *.subPathExpr*  
 ### 15.2. Volume Types and Drivers	   
 #### 15.2.1. Volume Types
-1. Persistent (PV)
-2. Ephemeral (EV)
-3. Projective
+1. **Persistent** (PV) exists beyond the lifetime of any Pods
+2. **Ephemeral** (EV) has a lifetime linked to a Pod
+3. **Projective**
 	   
 #### 15.2.2. In-Tree Volume drivers
-1. *emptyDir* - (EV), it is removed with its Pod's removal, but is safe with its Pod's crash.
+1. *emptyDir* - (EV), it is removed with its Pod's removal, but is safe with its Pod's crash (if *media: Memory*, it is allocated as tmpfs in memory).
 2. *hostPath* - does not work in a multinode env, use *local
 3. *local* - multinode local storage
 4. *configMap* - (EV) ([usage](#103-config-file))
 5. *secret* - (EV) ([usage](#113-secret-file))
-6. downwardAPI - (EV), to inject Pod and Container fields into Container - metadata, spec, status, resource  
+6. *downwardAPI* - (EV), to inject Pod and Container fields into Container - metadata, spec, status, resource  
 	   
 #### 15.2.3. Container Storage Interface (CSI)
 [Out-of-Tree Volume drivers](https://github.com/kubernetes-csi/external-provisioner)  
@@ -1652,9 +1728,9 @@ Get label:
 *PersistentVolume* PV [cluster-scoped] and  *PersistentVolumeClaim* PVC [namespaced] lifecycle  
 *PVC* serves to decouple a Pod from *PV*  
 
-> **CKAD hints**
+> **CKA / CKAD hints**
 > 
-> 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/)
+> 1. [Tutorial](https://kubernetes.io/docs/tutorials/configuration/configure-persistent-volume-storage/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 > 
 > Search patterns: *persistentvolume*
@@ -1747,8 +1823,8 @@ volumes:
   - name: data
     persistentVolumeClaim:
       claimName: block-pvc
-# Pod .spec.containers[]
 
+# Pod .spec.containers[]
 volumeDevices:
   - name: data
     devicePath: /dev/xvda
@@ -1780,21 +1856,29 @@ volumeMounts:
 	   
 2. *ProjectedVolume* - maps several existing volume sources into the same directory  
    
-3. *StorageClass* [cluster-scoped]
-	1. Parameters
-		1. *provisioner* - a vendor, internal or external CSI
-		2. *parameters* - usually vendor-specific
-		3. *reclaimPolicy* - volume data reclamation
-			1. Retain
-			2. Delete
-			3. Recycle
-		4. *volumeBindingMode* - defines when binding should happen - it matters what type to avoid getting stuck PV in the Pod-specific wrong location
-			1. *Intermediate* (default) - bind to PV once PVC is created - best for **global-access storage** - NFS, CephFS, iSCSI
-			2. *WaitForFirstConsumer* - bind PV to PVC once a Pod is scheduled - best for **topology-constrained**, **zoned** storage - Cloud-based, local, node-based ZFS/Longhorn  
-		5. *allowedTopologies.matchLabelExpressions* - restricts binding within labelled zones  
+### 15.4. StorageClass (cluster-scoped)
+
+> **CKA / CKAD hints**
+> 
+> 1. [Tasks](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
+> 2. [Concepts](https://kubernetes.io/docs/concepts/storage/storage-classes/)
+> 
+> Search patterns: *storageclass*, *persistentvolume*
+
+**Parameters:**
+1. *provisioner* - a vendor, internal or external CSI
+2. *parameters* - usually vendor-specific
+3. *reclaimPolicy* - volume data reclamation
+	1. Retain
+	2. Delete
+	3. Recycle
+4. *volumeBindingMode* - defines when binding should happen - it matters what type to avoid getting stuck PV in the Pod-specific wrong location
+	1. *Intermediate* (default) - bind to PV once PVC is created - best for **global-access storage** - NFS, CephFS, iSCSI
+	2. *WaitForFirstConsumer* - bind PV to PVC once a Pod is scheduled - best for **topology-constrained**, **zoned** storage - Cloud-based, local, node-based ZFS/Longhorn  
+5. *allowedTopologies.matchLabelExpressions* - restricts binding within labelled zones  
 			   
 
-### 15.4. VolumeClaimTemplate
+### 15.5. VolumeClaimTemplate
 Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-storageclasses) for each Pod in a [StatefulSet](#5-statefulset). In other words, each Pod in the StatefulSet gets its own PersistentVolumeClaim based on this template.   
 
 
@@ -1927,19 +2011,18 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 				  - labels pairs
 			  - *includeSelectors*: true|false(default) - adds *.metadata.labels*, *.spec.selector.matchLabels* and *.spec.templates.metadata.labels* like *commonLabels*
 			  - *includeTemplates*: true|false(default) - adds *.metadata.labels* and *.spec.templates.metadata.labels
-				```yaml
-				# Before (deprecated)
-				commonLabels:
-				  env: qa
-				  app: myapp
-				# After (Kustomize v5+)
-				labels:
-				  - pairs:
-				      env: qa
-				      app: myapp
-				    includeSelectors: true  
-				  ```
-			  
+			    ```yaml
+					# Before (deprecated)
+					commonLabels:
+					  env: qa
+					  app: myapp
+					# After (Kustomize v5+)
+					labels:
+					  - pairs:
+						  env: qa
+						  app: myapp
+						includeSelectors: true  
+				```
 		   4. *images*
 			   1. *name* (*image*: name) -> 
 				   1. *newName*
