@@ -1,11 +1,12 @@
-# ☸️ Kubernetes CKAD Notes
+# ☸️ Kubernetes CKA / CKAD Notes
 
-![Kubernetes](https://img.shields.io/badge/Kubernetes-CKAD%20Notes-326CE5?logo=kubernetes&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-CKA%20%2F%20CKAD%20Notes-326CE5?logo=kubernetes&logoColor=white)
+![CKA](https://img.shields.io/badge/Certification-CKA-1f6feb?logo=cncf&logoColor=white)
 ![CKAD](https://img.shields.io/badge/Certification-CKAD-1f6feb?logo=cncf&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 ![Markdown](https://img.shields.io/badge/Format-Markdown-000000?logo=markdown)
 
-> Personal **Kubernetes** study notes focused on the **CKAD** (Certified Kubernetes Application Developer) exam - covering architecture, workloads, networking, storage, security, troubleshooting, and day-to-day `kubectl` workflows.
+> Personal **Kubernetes** study notes covering both the **CKA** (Certified Kubernetes Administrator) and **CKAD** (Certified Kubernetes Application Developer) exams - architecture, cluster installation/upgrade/backup, workloads, networking, storage, security, autoscaling, troubleshooting, and day-to-day `kubectl` workflows.
 
 ---
 
@@ -13,9 +14,9 @@
 
 - [Start Here](#-start-here)
 - [Contents](#-contents)
-- [CKAD Exam Tips & Hints](#-ckad-exam-tips--hints)
+- [CKA / CKAD Exam Tips & Hints](#-cka--ckad-exam-tips--hints)
 - [Coverage](#-coverage)
-- [CKAD Study Resources](#-ckad-study-resources)
+- [CKA / CKAD Study Resources](#-cka--ckad-study-resources)
 
 ---
 
@@ -26,31 +27,35 @@
 | [`Kubernetes.md`](Kubernetes.md) | Main notes - start here |
 | [`attachment/`](attachment/) | Diagrams and screenshots |
 
-**Fastest route:** search for `CKAD hints` inside [`Kubernetes.md`](Kubernetes.md).
+**Fastest route:** search for `CKA / CKAD hints` inside [`Kubernetes.md`](Kubernetes.md).
 
 ---
 
 ## 📂 Contents
 
-- **[Tools](Kubernetes.md#tools)** - `kubectl`, `kustomize`, `kind`, `minikube`, `kubeadm`, `kops`, `kubespray`, `MicroK8s`, `K3S`
-- **[Main Components](Kubernetes.md#main-components)** - [Control Plane](Kubernetes.md#control-plane-nodes) · [Working Nodes](Kubernetes.md#working-nodes) · [Network Communication](Kubernetes.md#5-network-communication) · [Addons](Kubernetes.md#4-addons)
-- **[Resources & Workloads](Kubernetes.md#resources)**
+- **[Tools](Kubernetes.md#playground-tools)** - `kubectl`, `kustomize`, `kind`, `minikube`, `kubeadm`, `Cluster API`, `kops`, `kubespray`, `MicroK8s`, `K3S`
+- **[Main Components](Kubernetes.md#main-components)** - [Control Plane](Kubernetes.md#control-plane-nodes) · [Working Nodes](Kubernetes.md#working-nodes) · [Network Communication](Kubernetes.md#5-network-communication) · [Addons](Kubernetes.md#4-addons) · [Component Communication Examples](Kubernetes.md#component-communication-examples)
+- **[Cluster Administration](Kubernetes.md#maintenance)** *(CKA)*
+  - [Cluster Installation (kubeadm)](Kubernetes.md#1-cluster-installation) · [Cluster Upgrade](Kubernetes.md#2-cluster-upgrade) · [ETCD Backup & Restore](Kubernetes.md#3-etcd-backup)
+- **[KubeConfig](Kubernetes.md#0-kubeconfig)**
+- **[Resources & Workloads](Kubernetes.md#workload-resources)**
   - [Namespace](Kubernetes.md#1-namespace) · [Pods / Containers](Kubernetes.md#2-pods--containers) · [ReplicaSet](Kubernetes.md#3-replicaset-replicationcontroller)
   - [Deployment](Kubernetes.md#4-deployment) · [StatefulSet](Kubernetes.md#5-statefulset) · [DaemonSet](Kubernetes.md#6-daemonset)
   - [Job](Kubernetes.md#7-job) · [CronJob](Kubernetes.md#8-crontabjob)
-- **[Platform Topics](Kubernetes.md#resources)**
-  - [Networking](Kubernetes.md#9-networking) - Service, Ingress, NetworkPolicy, EndpointSlices
+- **[Platform Topics](Kubernetes.md#workload-resources)**
+  - [Networking](Kubernetes.md#9-networking) - Service, Ingress, Gateway API, NetworkPolicy, EndpointSlices, Network Tools
   - [ConfigMap](Kubernetes.md#10-configmap) · [Secret](Kubernetes.md#11-secret) · [ServiceAccount](Kubernetes.md#12-serviceaccount)
   - [AAA Security](Kubernetes.md#13-aaa-security) - Authentication, Authorization, Admission Control
   - [Monitoring](Kubernetes.md#14-monitoring)
   - [Volumes](Kubernetes.md#15-volumes) - PV/PVC lifecycle, StorageClass, CSI
-  - [Extensions](Kubernetes.md#16-kubernetes-extensions) · [CRDs](Kubernetes.md#17-custom-resource-definition-crd) · [Helm](Kubernetes.md#18-helm) · [Kustomize](Kubernetes.md#19-kustomize) · [Service Mesh](Kubernetes.md#20-service-mesh)
+  - [Extensions](Kubernetes.md#16-kubernetes-extensions) · [CRDs](Kubernetes.md#17-custom-resource-definition-crd-cr-operator) · [Helm](Kubernetes.md#18-helm) · [Kustomize](Kubernetes.md#19-kustomize) · [Service Mesh](Kubernetes.md#20-service-mesh)
+  - [Scaling](Kubernetes.md#21-scaling) - HPA, VPA
 
 ---
 
-## 🛠 CKAD Exam Tips & Hints
+## 🛠 CKA / CKAD Exam Tips & Hints
 
-In [`Kubernetes.md`](Kubernetes.md), **CKAD hints** are short callout blocks placed next to exam-heavy topics 
+In [`Kubernetes.md`](Kubernetes.md), **CKA / CKAD hints** are short callout blocks placed next to exam-heavy topics 
 and serve as a brief memorization for quicker access to the required resources under exam pressure.
 
 Each hint typically provides:
@@ -63,7 +68,7 @@ Each hint typically provides:
 ### Exam Speed Flow
 
 ```
-CKAD hints  →  kubectl -h  →  kubectl explain  →  kubernetes.io docs
+CKA / CKAD hints  →  kubectl -h  →  kubectl explain  →  kubernetes.io docs
 ```
 
 > ⚠️ Some resources (e.g. PV, PVC) still require a manifest template from the official docs - they cannot be generated imperatively.
@@ -73,27 +78,33 @@ CKAD hints  →  kubectl -h  →  kubectl explain  →  kubernetes.io docs
 ## 📋 Coverage
 
 - [x] Kubernetes architecture and component communication
+- [x] Cluster installation (kubeadm), upgrade, and ETCD backup/restore *(CKA)*
 - [x] Workloads and rollout strategies
-- [x] Networking - Service, Ingress, NetworkPolicy, EndpointSlices
+- [x] Networking - Service, Ingress, Gateway API, NetworkPolicy, EndpointSlices
 - [x] ConfigMap, Secret, ServiceAccount, RBAC, Admission controls
 - [x] Volumes, PV/PVC lifecycle, StorageClass, CSI
 - [x] Extensions - CRDs, Helm, Kustomize, Service Mesh
+- [x] Autoscaling - HPA and VPA
 
 ---
 
-## 📚 CKAD Study Resources
+## 📚 CKA / CKAD Study Resources
 
 1. **[Kubernetes Docs](https://kubernetes.io/docs/home/)** *(Primary source of truth)*
    - Navigate [Concepts](https://kubernetes.io/docs/concepts/) and [Tasks](https://kubernetes.io/docs/tasks/) quickly.
 
-2. **[Udemy - CKAD with Tests](https://www.udemy.com/course/certified-kubernetes-application-developer)**
-   by [Mumshad Mannambeth](https://www.udemy.com/user/mumshad-mannambeth/), [KodeKloud](https://www.udemy.com/user/kodekloud/), [Vijin Palazhi](https://www.udemy.com/user/vijin-palazhi-2/)
+2. **Udemy**
+   - **[CKA](https://www.udemy.com/course/certified-kubernetes-administrator-with-practice-tests/)** · **[CKAD](https://www.udemy.com/course/certified-kubernetes-application-developer)**
+   with Practice Tests by [Mumshad Mannambeth](https://www.udemy.com/user/mumshad-mannambeth/), [KodeKloud](https://www.udemy.com/user/kodekloud/), [Vijin Palazhi](https://www.udemy.com/user/vijin-palazhi-2/)
    - Structured video lessons + hands-on labs, lightning labs, and mock exams via [KodeKloud](https://kodekloud.com/).
+   - [CKA Notes on GitHub](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)
 
-3. **[KodeKloud - Ultimate CKAD Mock Exam Series](https://learn.kodekloud.com/courses/ultimate-certified-kubernetes-application-developer-ckad-mock-exam-series)**
+3. **KodeKloud - Ultimate Mock Exam Series**
+   - **[CKA](https://learn.kodekloud.com/user/courses/ultimate-certified-kubernetes-administrator-cka-mock-exam-series)** · **[CKAD](https://learn.kodekloud.com/courses/ultimate-certified-kubernetes-application-developer-ckad-mock-exam-series)**
    - High-quality mock labs.
 
-4. **[KillerCoda CKAD Scenarios](https://killercoda.com/ckad)**
+4. **KillerCoda Scenarios**
+   - **[CKA](https://killercoda.com/cka)** · **[CKAD](https://killercoda.com/ckad)**
    - Browser-based interactive scenarios.
 
 5. **[KillerShell](https://killer.sh/ckad)**
