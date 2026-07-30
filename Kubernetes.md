@@ -479,7 +479,7 @@ Conditions:
 | cri-dockerd       | cri-dockerd → dockerd → containerd                       | runc              | `kubelet → CRI → cri-dockerd → dockerd → containerd → shim → runc`                          | Legacy/transition path post-dockershim removal; maintained by Mirantis; modern Docker uses containerd internally making this path redundant                                                       |
 | cri-dockerd (MCR) | cri-dockerd → MCR → containerd                           | runc              | `kubelet → CRI → cri-dockerd → MCR → containerd → shim → runc`                              | Mirantis enterprise path; MCR is a hardened, FIPS 140-2 validated Docker Engine fork; targets regulated industries (federal, financial) with existing Docker investment; commercial SLA supported |
 
-**Key Architectural Notes**
+> [!NOTE] Key Architectural Notes
 - *CRI socket* is the Unix socket endpoint Kubelet connects to via gRPC, configured via *--container-runtime-endpoint*
 - *shim* (`containerd-shim-runc-v2`) decouples container process lifecycle from the containerd daemon - daemon restarts do not affect running containers
 - *RuntimeClass* is the Kubernetes mechanism enabling multi-runtime coexistence on a single node (e.g. runc alongside gVisor or Kata)
@@ -521,12 +521,14 @@ Conditions:
 11. **kubelet** reports Pod status back to kube-apiserver, which persists it in etcd.
 12. **kube-controller-manager**'s Deployment controller continues watching ReplicaSet/Pod status to drive rollout progress (e.g. `.status.availableReplicas`), updating the Deployment's own status via kube-apiserver as Pods become Ready.
 
-> **Notes**:  Two nested reconciliation loops here, not one: Deployment → ReplicaSet (step 3) and ReplicaSet → Pod (step 5). Both go through kube-apiserver independently. The Deployment controller never creates Pods directly, and the ReplicaSet controller never creates Deployments or knows about rollout strategy. On rolling update, a **new** ReplicaSet is created (not the old one edited) - old and new ReplicaSets coexist during the rollout, scaled inversely per *maxSurge / maxUnavailable*.  
+> [!NOTE] Notes:  
+> Two nested reconciliation loops here, not one: Deployment → ReplicaSet (step 3) and ReplicaSet → Pod (step 5). Both go through kube-apiserver independently. The Deployment controller never creates Pods directly, and the ReplicaSet controller never creates Deployments or knows about rollout strategy. On rolling update, a **new** ReplicaSet is created (not the old one edited) - old and new ReplicaSets coexist during the rollout, scaled inversely per *maxSurge / maxUnavailable*.  
 
 ### 2. One of the nodes crashed
 1. **kubelet** on the crashed node stops renewing its **NodeLease** (heartbeat, default every 10s) and stops sending node status updates.
 2. After `--node-monitor-grace-period` (default 40s) with no heartbeat, the **node controller** of the **kube-controller-manager** sets the Node's `Ready` condition to **`Unknown`**. It sends this update to kube-apiserver, which persists it in **etcd**. 
-   **Note**: `NotReady` is the string used when `Ready=False`; a crashed/unreachable node produces `Ready=Unknown`.
+   > [!NOTE] Note: 
+   > `NotReady` is the string used when `Ready=False`; a crashed/unreachable node produces `Ready=Unknown`.
 3. The **node controller** adds a `NoExecute` taint `node.kubernetes.io/unreachable` to the node via **kube-apiserver**. Pods get an **automatic toleration of `tolerationSeconds=300`** for this taint unless they already specify one - so they stay bound to the crashed node for up to 5 minutes before anything evicts them. (DaemonSet pods tolerate it indefinitely and are never evicted this way.)
 4. During that window, Pod `.status.phase` may show `Unknown`, but the **Pod object itself still exists** and the ReplicaSet controller still counts it as "active" - so no replacement Pod is created yet. This is the step your version skips.
 5. Once `tolerationSeconds` expires, **API-initiated eviction** deletes the Pod object via **kube-apiserver**.
@@ -594,8 +596,9 @@ systemctl enable containerd
 # Verify
 systemctl is-active containerd
 ```
-> **Notes**: `SystemdCgroup = false` with kubelet using `systemd` cgroup driver causes kubelet to crash-loop. 
-> This is one of the most common broken-cluster troubleshooting scenarios on CKS.
+> [!NOTE] Note:
+>  `SystemdCgroup = false` with kubelet using `systemd` cgroup driver causes kubelet to crash-loop. 
+
 
 ### 2. Install kubeadm, kubelet, kubectl [All Nodes]
 [Link](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl)
@@ -658,7 +661,8 @@ kubeadm join <LB>:6443 --token <token> \
   --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
-> **Notes**: `--upload-certs` generates a certificate key with a **2-hour TTL**. If that window passes before you join additional control plane nodes, regenerate:
+> [!NOTE] Note:
+>  `--upload-certs` generates a certificate key with a **2-hour TTL**. If that window passes before you join additional control plane nodes, regenerate:
 ```bash
 # On first CP node - regenerate cert key + new token
 kubeadm init phase upload-certs --upload-certs   # prints new certificate-key
@@ -685,7 +689,8 @@ It depends on the CNI provider.
 > [Pod Network](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network)  
 > [Addons](https://kubernetes.io/docs/concepts/cluster-administration/addons/)
 
-> **Notes**: pod CIDR *--pod-network-cidr* in `kubeadm init` must match what the CNI expects.  
+> [!WARNING] Note:
+>  pod CIDR *--pod-network-cidr* in `kubeadm init` must match what the CNI expects.  
 > A mismatch means pods can communicate on a node but not across nodes - silent and hard to diagnose.
 
 
@@ -1186,7 +1191,7 @@ status: {}
 > Search pattern: *taint*, *toleration*
 
 
-> **Note:**
+> [!NOTE] Note:
 > *Taints* are marked *Nodes* to repel *pods* if they are not tolerated. However, keep in mind that tolerant pods can occupy other nodes without any restricting taints (to bind them, use the [nodeAffinity approach](#232-nodeaffinity-node-label--pod-affinity)).  
 
 --
@@ -1259,7 +1264,7 @@ tolerations:
 >
 > Search pattern: *affinity*
 
-> **Note:**
+> [!NOTE] Note:
 > **Affinity** binds relevant *Pods* to the specific labelled *Nodes*. However, keep in mind that other *Pods* can also occupy these *Nodes* (to decline them, use the [Taints/Tolerations approach](#231-node-taints--pod-tolerations)).  
 
 --
@@ -1275,7 +1280,7 @@ Assign label:
 ##### 2. **Create Pod's nodeAffinity**
 Configure *Pod* spec per affinity type:  
 
-> **Note**:
+> [!NOTE] Notes:
 > 1. *nodeSelectorTerms* carries **OR** logic - if one of the terms matches
 > 2. *matchExpressions* carries **AND** logic - if all expressions match
 
@@ -1421,7 +1426,7 @@ For consistency and node group definition, they must have an appropriate *topolo
 
 ```
 
-> **Extra Notes**:
+> [!NOTE] Extra Notes:
 > 1. [Design proposal](https://github.com/kubernetes/design-proposals-archive/blob/main/scheduling/podaffinity.md)
 
 
