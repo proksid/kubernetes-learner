@@ -44,7 +44,8 @@
 
 ## Control Plane Nodes
 ### 1. API Server, kube-apiserver
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. get config and cmd flags
 > `> kubectl get -n kube-system pod/kube-apiserver-controlplane -o yaml`   
@@ -117,7 +118,8 @@ More key parameters, [see here](Kubernetes%20API-Server%20params.md)
 
 ### 2. Controller Manager, kube-controller-manager
   
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. get config and cmd flags  
 >    `> kubectl get -n kube-system pods/kube-controller-manager-controlplane -o yaml`  
@@ -154,7 +156,8 @@ More key parameters, [see here](Kubernetes%20Controller%20Manager%20params.md)
 ---
 
 ### 3. Scheduler, kube-scheduler
-> [!NOTE] **CKA hints**
+> [!NOTE]   
+> **CKA hints**
 > 
 > 1. get config and cmd flags  
 >    `> kubectl get -n kube-system pods/kube-scheduler-controlplane -o yaml`  
@@ -213,7 +216,8 @@ More key parameters, [see here](Kubernetes%20Scheduler%20params.md)
 ---
 
 ### 5. CoreDNS
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/)
 > 2. [Administer Task](https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/)
@@ -346,7 +350,8 @@ They can be allocated to bare metal, VMs, or containers, comprising Pods of the 
 	<img src="attachment/0a42f794f4bf5fb6fedac90f8d55a190.png" style='width: 800px;' />
 ### 1. Kubelet
 
-> [!NOTE] **CKA hints** 
+> [!NOTE]  
+> **CKA hints** 
 > 
 > 1. [Troubleshooting cluster](https://kubernetes.io/docs/tasks/debug/debug-cluster/)
 > 2. `> kubectl describe node <node-name>`
@@ -408,7 +413,8 @@ Conditions:
 `node01> cat /etc/kubernetes/kubelet.conf` - **API Server** communication
    
 ### 2. Kube-Proxy
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > TODO
 
 #### Concepts
@@ -479,12 +485,13 @@ Conditions:
 | cri-dockerd       | cri-dockerd → dockerd → containerd                       | runc              | `kubelet → CRI → cri-dockerd → dockerd → containerd → shim → runc`                          | Legacy/transition path post-dockershim removal; maintained by Mirantis; modern Docker uses containerd internally making this path redundant                                                       |
 | cri-dockerd (MCR) | cri-dockerd → MCR → containerd                           | runc              | `kubelet → CRI → cri-dockerd → MCR → containerd → shim → runc`                              | Mirantis enterprise path; MCR is a hardened, FIPS 140-2 validated Docker Engine fork; targets regulated industries (federal, financial) with existing Docker investment; commercial SLA supported |
 
-> [!NOTE] Key Architectural Notes
-- *CRI socket* is the Unix socket endpoint Kubelet connects to via gRPC, configured via *--container-runtime-endpoint*
-- *shim* (`containerd-shim-runc-v2`) decouples container process lifecycle from the containerd daemon - daemon restarts do not affect running containers
-- *RuntimeClass* is the Kubernetes mechanism enabling multi-runtime coexistence on a single node (e.g. runc alongside gVisor or Kata)
-- *CRI-O vs containerd* - peers at the CRI layer; choice is ecosystem-driven (OpenShift/RHEL vs general Kubernetes)
-- *cri-dockerd / MCR* - both ultimately route through containerd and runc; the added hops make these paths architecturally redundant for general use; MCR's value is compliance and commercial support, not runtime differentiation
+> [!NOTE]  
+> **Key Architectural Notes**
+> - *CRI socket* is the Unix socket endpoint Kubelet connects to via gRPC, configured via *--container-runtime-endpoint*
+> - *shim* (`containerd-shim-runc-v2`) decouples container process lifecycle from the containerd daemon - daemon restarts do not affect running containers
+> - *RuntimeClass* is the Kubernetes mechanism enabling multi-runtime coexistence on a single node (e.g. runc alongside gVisor or Kata)
+> - *CRI-O vs containerd* - peers at the CRI layer; choice is ecosystem-driven (OpenShift/RHEL vs general Kubernetes)
+> - *cri-dockerd / MCR* - both ultimately route through containerd and runc; the added hops make these paths architecturally redundant for general use; MCR's value is compliance and commercial support, not runtime differentiation
 
 ---  
 
@@ -521,13 +528,13 @@ Conditions:
 11. **kubelet** reports Pod status back to kube-apiserver, which persists it in etcd.
 12. **kube-controller-manager**'s Deployment controller continues watching ReplicaSet/Pod status to drive rollout progress (e.g. `.status.availableReplicas`), updating the Deployment's own status via kube-apiserver as Pods become Ready.
 
-> [!NOTE] Notes:  
+> [!NOTE]   
 > Two nested reconciliation loops here, not one: Deployment → ReplicaSet (step 3) and ReplicaSet → Pod (step 5). Both go through kube-apiserver independently. The Deployment controller never creates Pods directly, and the ReplicaSet controller never creates Deployments or knows about rollout strategy. On rolling update, a **new** ReplicaSet is created (not the old one edited) - old and new ReplicaSets coexist during the rollout, scaled inversely per *maxSurge / maxUnavailable*.  
 
 ### 2. One of the nodes crashed
 1. **kubelet** on the crashed node stops renewing its **NodeLease** (heartbeat, default every 10s) and stops sending node status updates.
 2. After `--node-monitor-grace-period` (default 40s) with no heartbeat, the **node controller** of the **kube-controller-manager** sets the Node's `Ready` condition to **`Unknown`**. It sends this update to kube-apiserver, which persists it in **etcd**. 
-   > [!NOTE] Note: 
+   > [!NOTE]  
    > `NotReady` is the string used when `Ready=False`; a crashed/unreachable node produces `Ready=Unknown`.
 3. The **node controller** adds a `NoExecute` taint `node.kubernetes.io/unreachable` to the node via **kube-apiserver**. Pods get an **automatic toleration of `tolerationSeconds=300`** for this taint unless they already specify one - so they stay bound to the crashed node for up to 5 minutes before anything evicts them. (DaemonSet pods tolerate it indefinitely and are never evicted this way.)
 4. During that window, Pod `.status.phase` may show `Unknown`, but the **Pod object itself still exists** and the ReplicaSet controller still counts it as "active" - so no replacement Pod is created yet. This is the step your version skips.
@@ -546,7 +553,8 @@ Conditions:
 # Maintenance
 
 ## 1. Cluster Installation
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 1. [Setup](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)
 > 2. [Container runtime](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
 > 3. [Setup tools: kubeadm](https://kubernetes.io/docs/reference/setup-tools/kubeadm/)
@@ -596,7 +604,7 @@ systemctl enable containerd
 # Verify
 systemctl is-active containerd
 ```
-> [!NOTE] Note:
+> [!NOTE]  
 >  `SystemdCgroup = false` with kubelet using `systemd` cgroup driver causes kubelet to crash-loop. 
 
 
@@ -661,7 +669,7 @@ kubeadm join <LB>:6443 --token <token> \
   --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
-> [!NOTE] Note:
+> [!NOTE]  
 >  `--upload-certs` generates a certificate key with a **2-hour TTL**. If that window passes before you join additional control plane nodes, regenerate:
 ```bash
 # On first CP node - regenerate cert key + new token
@@ -689,7 +697,7 @@ It depends on the CNI provider.
 > [Pod Network](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network)  
 > [Addons](https://kubernetes.io/docs/concepts/cluster-administration/addons/)
 
-> [!WARNING] Note:
+> [!WARNING]
 >  pod CIDR *--pod-network-cidr* in `kubeadm init` must match what the CNI expects.  
 > A mismatch means pods can communicate on a node but not across nodes - silent and hard to diagnose.
 
@@ -740,7 +748,9 @@ kubeadm certs check-expiration
 ---
 
 ## 2. Cluster Upgrade
-> [!NOTE] **CKA hints**
+> [!NOTE]   
+> **CKA hints**
+> 
 > 1. [Task](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/)
 > 
 > Search pattern: *upgrade cluster*, *community repo*
@@ -874,11 +884,12 @@ kubectl get nodes   # all should be Ready at the new version
 ---
 
 ## 3. ETCD backup
-> [!NOTE] **CKA hints**
+> [!NOTE]   
+> **CKA hints**
 > 
 > 1. [Task](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
-> 2. `> etcdctl snapshot save -h`  ! etcdCtl !
-> 3. `> etcdutl snapshot restore -h`  ! etcdUtl !
+> 2. `> etcdctl snapshot save -h`  ! etcd**C**tl !
+> 3. `> etcdutl snapshot restore -h`  ! etcd**U**tl !
 > 4. `> source <(etcdctl completion bash)` - etcdctl completion simply
 > 5. `> source <(etcdutl completion bash)` - etcdutl completion simply
 > 6. Extra: [HA ETCD cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/setup-ha-etcd-with-kubeadm/)
@@ -1001,7 +1012,8 @@ TODO
 
 ## 0. KubeConfig
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `kubectl config -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/)
@@ -1087,7 +1099,8 @@ See [LimitRange](#273-limitrange) and [ResourceQuota](Kubernetes.md#274-resource
 
 ## 2. Pods / Containers
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concept](https://kubernetes.io/docs/concepts/workloads/pods/)
 > 2. Skeleton manifest:  
@@ -1102,7 +1115,8 @@ A collection of one or more containers and volumes, where they share the same IP
    <img src="attachment/17589c76ef45ce46327f521ce2272712.png" style='width: 500px;' />  
 ### 2. Static Pods
 
- > [!NOTE] **CKA hints**
+ > [!NOTE]  
+ > **CKA hints**
  >
  > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
  > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/pods/#static-pods)
@@ -1182,7 +1196,8 @@ status: {}
 ### 2.3. POD Scheduling
 #### 2.3.1. Node Taints / Pod Tolerations
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
 > 2. `> kubectl taint node -h`
@@ -1191,7 +1206,7 @@ status: {}
 > Search pattern: *taint*, *toleration*
 
 
-> [!NOTE] Note:
+> [!IMPORTANT]
 > *Taints* are marked *Nodes* to repel *pods* if they are not tolerated. However, keep in mind that tolerant pods can occupy other nodes without any restricting taints (to bind them, use the [nodeAffinity approach](#232-nodeaffinity-node-label--pod-affinity)).  
 
 --
@@ -1257,14 +1272,15 @@ tolerations:
 
 #### 2.3.2. nodeAffinity: Node Label / Pod's nodeAffinity
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/)
 >
 > Search pattern: *affinity*
 
-> [!NOTE] Note:
+> [!IMPORTANT]
 > **Affinity** binds relevant *Pods* to the specific labelled *Nodes*. However, keep in mind that other *Pods* can also occupy these *Nodes* (to decline them, use the [Taints/Tolerations approach](#231-node-taints--pod-tolerations)).  
 
 --
@@ -1280,7 +1296,7 @@ Assign label:
 ##### 2. **Create Pod's nodeAffinity**
 Configure *Pod* spec per affinity type:  
 
-> [!NOTE] Notes:
+> [!NOTE]  
 > 1. *nodeSelectorTerms* carries **OR** logic - if one of the terms matches
 > 2. *matchExpressions* carries **AND** logic - if all expressions match
 
@@ -1426,14 +1442,16 @@ For consistency and node group definition, they must have an appropriate *topolo
 
 ```
 
-> [!NOTE] Extra Notes:
+> [!NOTE]  
+> Extra Notes:
 > 1. [Design proposal](https://github.com/kubernetes/design-proposals-archive/blob/main/scheduling/podaffinity.md)
 
 
 ---
 
 #### 2.3.4. topologySpreadConstraints
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
 > 
@@ -1547,7 +1565,8 @@ nodeName: node01
 ---
 
 #### 2.3.6. PriorityClass [cluster-spaced]
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. `> kubectl create priorityclass -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)
@@ -1569,8 +1588,9 @@ preemptionPolicy: PreemptLowerPriority
 
 
 1. *value* - (-2147483648 -1000000000, 0 - default) priority: the higher the priority;  
-   > [!WARNING] Security Note:
-   >   Administrator must restrict ordinary user Pod priority to lower than special-need ones with *ResourceQuota*
+   > [!WARNING] 
+   > **Security Note**:
+   >   Administrators must restrict ordinary user Pod priority to lower than special-need ones with *ResourceQuota*
 2. *preemptionPolicy* 
 	1. *PreemptLowerPriority* - (default, replace lower-priority Pods with higher ones within the graceful termination period);
 	2. *Never* - do not touch the existing Pods, redistribute Pods that are in the queue;
@@ -1593,7 +1613,8 @@ spec:
 ### 2.4. Container Probes
 
 #### 2.4.1 Probe Types
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 > 2. `> kubectl explain pods.spec.containers`   
@@ -1718,7 +1739,8 @@ With `PodLevelResources` [feature gate](https://kubernetes.io/docs/reference/com
  - Priority: When both pod-level and container-level resources are specified, pod-level resources take precedence.
 
 #### 2.7.1. Resources declaration per Container / Pod
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 > 2. [Tasks CPU](https://kubernetes.io/docs/tasks/configure-pod-container/assign-cpu-resource/)
@@ -1762,7 +1784,8 @@ spec:
 ---
 
 #### 2.7.2. QoS Class 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/quality-service-pod/)
 > 
@@ -1778,7 +1801,8 @@ spec:
 ---
 
 #### 2.7.3. LimitRange
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/policy/limit-range/) and then lots of examples at the bottom
 > 2. `> kubectl explain limitrange --recursive`
@@ -1883,7 +1907,8 @@ During the investigation of the overlimit issues, use [the newer api](#2101-even
 
 #### 2.7.4. ResourceQuota
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/policy/resource-quotas/)
 > 2. `> kubectl create quota -h`
@@ -1971,14 +1996,16 @@ spec:
 ### 2.8. Pod / Container Security Context
 Tools to manage pod and container privileges and access   
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 > 3. `kubectl explain pods.spec.securityContext --recursive`
 > 4. `kubectl explain pods.spec.containers.securityContext --recursive`
 >
->Search patterns: *securitycontext*
+>Search patterns: *securitycontext*  
+>
 > **Notes**:
 > - Keep in mind that when we get the existing pod manifest, there is *spec.securityContext*, even though it is empty and **rewrites are declared above**.
 
@@ -2038,7 +2065,8 @@ spec:
 ---
 
 ### 2.9. Container types and multi-container pods
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts: InitContainer](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
 > 2. [Concepts: Sidecar](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/)
@@ -2080,7 +2108,8 @@ Ephemeral containers are temporary troubleshooting containers added to an existi
 ---
 
 ### 2.10. Troubleshooting
->[!NOTE] **CKA / CKAD hints**
+>[!NOTE]  
+>**CKA / CKAD hints**
 > 
 > 1. [Application](https://kubernetes.io/docs/tasks/debug/debug-application/)
 > 2. [Cluster](https://kubernetes.io/docs/tasks/debug/debug-cluster/)
@@ -2095,7 +2124,7 @@ Ephemeral containers are temporary troubleshooting containers added to an existi
 3. Sorting  
    `> kubectl events --sort-by='.metadata.creationTimestamp'`  
 
-> [!NOTES] **Notes**
+> [!NOTE]  
 > Modern Kubernetes controllers (ReplicaSet, Job, etc.) emit events using the new `events.k8s.io/v1` API, which stores the linked object in a field called `regarding`.  
 >`> kubectl get events` uses `--field-selector involvedObject.*` - that's the **old** field name from `core/v1`. So when you filter by it, you're querying the wrong field for events emitted by modern controllers. They either show up late (after de-duplication forces a write-back to the old format) or not at all.  
 > `> kubectl events` queries **both** API groups, maps field names correctly, and merges the results - so it sees everything immediately.  
@@ -2114,10 +2143,6 @@ Ephemeral containers are temporary troubleshooting containers added to an existi
 | **137** | SIGKILL - commonly **OOMKilled**                                                                     |
 | **143** | SIGTERM - normal termination; if the app doesn't exit before the grace period, SIGKILL (137) follows |
 
-> [!TIP] **Note**: 
-> Exam focus 137 and 143 are the two most likely to appear - diagnose with `kubectl describe pod` or `kubectl logs --previous`.
-
-
 #### 2.10.2. Logs
 1. Read the Pod logs  
    `> kubectl logs pods/test-pod` or in real-time `-f`   
@@ -2130,7 +2155,8 @@ Ephemeral containers are temporary troubleshooting containers added to an existi
 
 
 #### 2.10.3. Debug
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `> kubectl debug -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/)
@@ -2213,7 +2239,8 @@ spec:
 ---
 
 ## 4. Deployment  
-> [!NOTE] **CKAD /CKA hints**
+> [!NOTE]  
+> **CKAD / CKA hints**
 > 
 > 1. `> kubectl create deployment --dry-run=client -o yaml ...` 
 > 2. `> kubectl create deployment -h`
@@ -2336,7 +2363,8 @@ Imperatively, scale up v2 and scale out v1.
 ---
 
 ## 5. StatefulSet
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+>  **CKA / CKAD hints**
 > 
 > 1. `kubectl create deployment --dry-run=client -o yaml ...`, 
 > 	- then replace kind with *kind: StatefulSet*
@@ -2376,7 +2404,8 @@ It usually works with a [Headless Service](#^headless-service) to give each Pod 
 
 ## 6. DaemonSet
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)
 > 2. `kubectl create deployment --dry-run=client ...`
@@ -2429,7 +2458,8 @@ The binding mechanism to the Nodes is the same as for the user.
 ---
 
 ## 7. Job
-> [!NOTE] **CKAD hints**
+> [!NOTE]  
+> **CKAD hints**
 > 
 > 1. `kubectl create job -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/job/)
@@ -2478,7 +2508,8 @@ spec:
 
 ## 8. CrontabJob
 
-> [!NOTE] **CKAD hints**
+> [!NOTE]  
+> **CKAD hints**
 > 
 > 1. `kubectl create cronjobs -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
@@ -2529,7 +2560,8 @@ spec:
 
 
 ### 9.2. Service
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `kubectl create service -h`
 > 2. `kubectl expose -h`
@@ -2588,7 +2620,8 @@ TODO
 
 
 ### 9.3. Ingress
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `kubectl create ingress -h`
 > 2. [Concepts](https://kubernetes.io/docs/concepts/services-networking/ingress/)
@@ -2666,7 +2699,8 @@ spec:
 ---
 
 ### 9.4. GatewayAPI
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Guides](https://gateway-api.sigs.k8s.io/guides/user-guides/http-redirect-rewrite/)
 > 2. [K8s Concepts](https://kubernetes.io/docs/concepts/services-networking/gateway/)
@@ -2698,7 +2732,7 @@ spec:
 | `Accepted: False`            | *controllerName* unknown or config invalid.                                                          |
 | `SupportedVersion: True`     | Controller supports the installed CRD version (≥ 1.26).                                              |
 | `status.supportedFeatures[]` | Optional features the implementation supports e.g. `HTTPRouteMethodMatching`, `TLSRoutePassthrough`. |
-> [!NOTE] **Notes**: 
+> [!NOTE]  
 > *controllerName* is immutable. Always verify *status.conditions[Accepted]=True* before creating a Gateway that references this class.
 
 --
@@ -2749,7 +2783,7 @@ spec:
 | *status.listeners[].conditions[ResolvedRefs]* | All *certificateRefs* resolved. *False* if Secret missing or ReferenceGrant absent.           |
 | *status.listeners[].attachedRoutes*           | Count of Routes currently attached to this listener. Unexpected value = rogue route attached. |
 
-> [!NOTE] **Notes**: 
+> [!NOTE]   
 > Cross-namespace *tls.certificateRefs* always requires a *ReferenceGrant* in the Secret's namespace. Missing it causes *ResolvedRefs=False* on the listener.  
 > **CKS**: *allowedRoutes.namespaces.from: All* is a blast-radius risk. Prefer *Selector* with an explicit label in production and exam hardening tasks.  
 > A critical reason for the requirement that **Listeners** are distinct is that traffic flowing through a Gateway **must only match a single Listener**. Any particular traffic must only be able to be assigned to a single **Listener**, and once that **Listener** is chosen, the traffic **must** be routable via an attached, protocol-specific Route, **or it must be dropped by the Gateway**.  
@@ -2940,7 +2974,7 @@ spec:
 ```
 
 
-> [!NOTE] **Notes**:
+> [!NOTE]  
 > - `HTTPS`+`Terminate` and `TLS`+`Terminate` both decrypt at the Gateway. The difference is what happens next: **HTTPRoute** does full L7 processing on the plaintext (host/path/header matching, filters). **TLSRoute** does not - routing was already decided by **SNI** during the handshake; the decrypted bytes are handed to the backend as-is, without HTTP interpretation.
 > - `protocol` is a hard gate on which Route kind can attach: **TLS** mode does not change it. An **HTTPRoute** cannot attach to a **TLS listener,** and a **TLSRoute** cannot attach to an **HTTPS listener**, regardless of mode.
 
@@ -3129,7 +3163,8 @@ nginx-gateway     nginx-gateway-5c7564c845-xsvxh                  1/1     Runnin
 
 
 ### 9.5. EndpointSlices
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
 >
@@ -3147,7 +3182,8 @@ A set of network endpoints (ip-addresses) and ports
 ---
 
 ### 9.6. NetworkPolicy
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Conception](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 > 2. [Tasks](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/)
@@ -3311,7 +3347,7 @@ spec:
 ```
 
 
-> [!NOTE] **Note**: 
+> [!WARNING] 
 Working with Egress policy, **DO NOT FORGET** about requests to **DNS anywhere**  
   ```yaml
   egress:
@@ -3372,7 +3408,8 @@ wget -O- -T 5 nginx-api-svc:8080
 ---
 
 ## 10. ConfigMap
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `kubectl create configmap -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) (lots of examples)
@@ -3478,7 +3515,8 @@ If we need to gather several config files from a directory into a single *Config
 ---
 
 ## 11. Secret
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 >1. `kubectl create secret -h`
 >2. [Tasks](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/)
@@ -3612,7 +3650,8 @@ spec:
 --
 
 ### 11.5. Docker Regitry Secret
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
 > 2. [Reference](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_secret_docker-registry/)
@@ -3658,7 +3697,8 @@ Extract data
 ---
 
 ## 12. ServiceAccount
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `kubectl create sa -h`
 > 2. [Tasks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
@@ -3698,7 +3738,8 @@ Extract data
 
 ### Typical SA/Token workflow
 
-> [!WARNING] **Security Note**: 
+> [!WARNING] 
+> **Security Note**: 
 > Only workloads that legitimately call the Kubernetes API should have a dedicated SA with *automountServiceAccountToken: false* overridden to *true* explicitly, and their permissions should be restricted by namespace-scoped RBAC with least-privilege verbs and resources. All other SAs, including *default*, should have *automountServiceAccountToken: false* and no RBAC bindings.
 
 1. **User**: `> kubectl create sa test-sa`  
@@ -3859,7 +3900,8 @@ openssl x509 -req \
 ```
 
 ##### 2. Kubernetes TLS Workflow
-> [!NOTE] **CKA hints**
+> [!NOTE]  
+> **CKA hints**
 > 
 > 1. [Task](https://kubernetes.io/docs/tasks/tls/certificate-issue-client-csr/)
 > 2. `> kubectl certificate -h`
@@ -4005,7 +4047,8 @@ Attribute-based authorizer.
 
 #### 13.2.3. RBAC 
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `> kubectl create (role | clusterrole) -h`
 > 2. `> kubctl create (rolebinding | clusterrolebinding) -h`
@@ -4022,7 +4065,7 @@ Role-based authorizer.
 ##### 2. RoleBinding
 1. Generate a skeleton manifest for role binding to users and groups  
    `> kubectl rolebinding test-rolebinding (--role|--clusterrole)=test-role --user=test1,test2 --group=testgroup1 --dri-run=client -o yaml`  
-   > [!NOTE] **Note**: 
+   > [!NOTE]  
    > Though *rolebinding* (namespaced) can bind a *clusterrole* (cluster-scope), permissions are restricted by *role/rolebinding* namespace  
    
 2. Generate a skeleton manifest for the role binding to a service account *test-sa* from the *default* namespace in a non-default *test-ns* namespace  
@@ -4038,7 +4081,8 @@ Role-based authorizer.
 ---
 
 ### 13.3. Admission control
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Reference](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
 > 2. [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/)
@@ -4110,7 +4154,8 @@ Get label:
 ---
 
 ## 15. Volumes
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/storage/volumes/)
 > 2. [Concepts/local/nodeAffinity](https://kubernetes.io/docs/concepts/storage/volumes/#local)
@@ -4181,7 +4226,7 @@ spec:
 ```
 
 
-> [!WARNING]  **Notes**: 
+> [!WARNING] 
 >  *subPath* does **not** get live-updated; if the underlying file in the source volume changes (e.g. a ConfigMap update), a *subPath*-mounted file will **not** reflect the update, unlike a full volume mount which propagates updates via symlink swap.
 
 
@@ -4264,7 +4309,8 @@ spec:
 
 
 ### 15.3. PersistentVolume / PersistentVolumeClaim Lifecycle
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Tutorial](https://kubernetes.io/docs/tutorials/configuration/configure-persistent-volume-storage/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
@@ -4295,7 +4341,7 @@ For **Dynamic Provisioning**, the *DefaultStorageClass*  [Admission Controller](
 1. **Sufficient Capacity** - PV >= PVC
 2. **Volume Modes** - must match
 3. **Access Modes** - PVC must be a subset of PV.
-   > [!NOTE] **Notes**:
+   > [!NOTE]  
    > 1. A volume can be mounted using only one access mode at a time, even if it supports multiple.
    > 2. **Access modes don't determine the actual mount flags.** They're a _contract_ between the cluster and the storage system. The actual filesystem permissions on the mounted volume are controlled by `fsGroup`, `readOnlyRootFilesystem`, and the `mountOptions` on the PV, or `volumeMounts[].readOnly: true` - not the access mode directly. So, they mainly describe how storage can be attached or shared: for example, one node, many nodes, or one pod. 
    >      
@@ -4445,7 +4491,8 @@ spec:
    
 ### 15.4. StorageClass (cluster-scoped)
 
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
 > 2. [Concepts](https://kubernetes.io/docs/concepts/storage/storage-classes/)
@@ -4496,7 +4543,8 @@ Defines how PersistentVolumes are [dynamically provisioned](#2-dynamic-pvc---pv-
 ---
 
 ## 17. Custom Resource Definition (**CRD, CR, Operator**)
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. [Concepts](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) - CRD
 > 2. [Tasks](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) - CR
@@ -4600,7 +4648,8 @@ spec:
 ---
 
 ## 18. HELM
-> [!NOTE] **CKAD / CKA hints**
+> [!NOTE]  
+> **CKAD / CKA hints**
 > 
 > 1. [Docs](https://helm.sh/docs/)
 > 2. [Cheat Sheet](https://helm.sh/docs/intro/cheatsheet/)
@@ -4699,7 +4748,7 @@ mychart/
 4. Get the release history  
    `> helm history RELEASE-NAME`   
    
-> [!NOTE] **Note**: 
+> [!NOTE]  
 > Helm upgrade inherits all custom/user value settings implicitly. If you use `--set / -f` flags, Helm resets previous settings and overwrites defaults with `--set`. In this case, use the `--reuse-values` flag to keep the previous settings and merge them with `--set` values.
 
 
@@ -4729,7 +4778,8 @@ helm template nginx bitnami/nginx --version=25.0.9 --set tls.enabled=true
 ---
 
 ## 19. Kustomize
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]   
+> **CKA / CKAD hints**
 > 
 > 1. [Tasks](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
 >    
@@ -4847,7 +4897,8 @@ or *path* (file)
 <img src="attachment/150fecb0b80d56b380c197113b7a91ae.png" style='width: 800px;' />
 
 ### 21.1. HPA
-> [!NOTE] **CKA / CKAD hints**
+> [!NOTE]  
+> **CKA / CKAD hints**
 > 
 > 1. `> kubectl autoscale -h`
 > 2. `> kubectl describe hpa ...`
@@ -4880,7 +4931,7 @@ Every sync (`--horizontal-pod-autoscaler-sync-period`, default **15s**) the cont
 |`Utilization`|`usage ÷ requests`|**Yes**|`averageUtilization: 70` (% of request)|
 |`AverageValue`|`usage ÷ podCount`|No|`averageValue: 500Mi` (absolute)|
 
-> [!NOTE] **Note**:
+> [!NOTE]  
 > `Utilization` is a percentage of *resources.requests*, never of *limits*. Missing the request on **any container** in the Pod - including auto-injected **sidecars** (Istio/Linkerd) - makes utilization uncomputable and the HPA goes inert.
 
 **Utilization** example (cpu):
@@ -4953,7 +5004,7 @@ kubectl exec -n kube-system pods/kube-controller-manager-controlplane -it -- kub
 #### Concepts
 **VPA** right-sizes the **CPU and memory `requests`** (and optionally `limits`) of the containers in a workload, based on **historical and live usage** - instead of scaling the _number_ of replicas the way HPA does. It up-scales pods that are under-requesting (throttled / OOMKilled) and down-scales pods that are over-requesting (wasted capacity), and it preserves the request-to-limit ratio from the original pod spec.
 
-> [!NOTE] **Note**:
+> [!NOTE]  
 >  **VPA** is not part of core Kubernetes Unlike `HorizontalPodAutoscaler` (which lives in the built-in `autoscaling/v2` API group), VPA is a **Custom Resource Definition** plus an **add-on controller set**. It must be installed separately (`kubernetes/autoscaler` repo → `./hack/vpa-up.sh`, or the upstream Helm chart). There is no VPA on a stock kubeadm cluster.
 
 ##### The three components
@@ -4974,7 +5025,7 @@ VPA runs intermittently (not a continuous control loop). Three cooperating contr
 | *InPlace*           | Attempts a **restart-free resize** but **never evicts** - if it can't apply the change (e.g. node lacks capacity) it defers and retries in a later loop. Alpha (VPA 1.7.0). |
 | *Auto*              | **Deprecated since VPA 1.4.0**; currently an alias for *Recreate*. Prefer an explicit mode.                                                                                 |
 
-> [!NOTE] **Note:** 
+> [!NOTE]  
 > Enabling the in-place modes (`InPlace` / `InPlaceOrRecreate`) There are **two** in-place gates, and they sit at **two layers**:
 >
 > - **Core Kubernetes:** `InPlacePodVerticalScaling` is **GA / always-on in 1.35** (alpha 1.27 → beta 1.33 → stable 1.35). On a 1.34 cluster it's beta-on; on 1.35 you can't disable it. This is _not_ the gate that blocks you.
